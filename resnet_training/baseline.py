@@ -11,7 +11,6 @@ def train_baseline(model, train_loader, device, epochs=10):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
-    # Metrics storage
     epoch_losses = []
     epoch_accuracies = []
     start_time = time.time()
@@ -26,7 +25,6 @@ def train_baseline(model, train_loader, device, epochs=10):
 
             optimizer.zero_grad()
 
-            # Forward and backward pass
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
@@ -34,12 +32,10 @@ def train_baseline(model, train_loader, device, epochs=10):
 
             running_loss += loss.item()
 
-            # Calculate accuracy
             preds = torch.argmax(outputs, dim=1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-        # Calculate and store metrics
         epoch_loss = running_loss / len(train_loader)
         epoch_accuracy = correct / total
         epoch_losses.append(epoch_loss)
@@ -50,5 +46,4 @@ def train_baseline(model, train_loader, device, epochs=10):
     end_time = time.time()
     log_memory(start_time, end_time)
 
-    # Plot and save metrics
     plot_metrics(epoch_losses, epoch_accuracies, "Baseline Training")

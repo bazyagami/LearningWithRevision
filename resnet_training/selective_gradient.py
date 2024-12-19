@@ -11,7 +11,6 @@ def train_selective(model, train_loader, device, epochs=10):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
-    # Metrics storage
     epoch_losses = []
     epoch_accuracies = []
     start_time = time.time()
@@ -24,13 +23,11 @@ def train_selective(model, train_loader, device, epochs=10):
         for inputs, labels in train_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             
-            # Forward pass to identify misclassified samples
             with torch.no_grad():
                 outputs = model(inputs)
                 preds = torch.argmax(outputs, dim=1)
                 mask = preds != labels
 
-            # Skip batch if all samples are correctly classified
             if not mask.any():
                 continue
 
@@ -39,7 +36,6 @@ def train_selective(model, train_loader, device, epochs=10):
 
             optimizer.zero_grad()
 
-            # Forward and backward pass on misclassified samples
             outputs = model(inputs_misclassified)
             loss = criterion(outputs, labels_misclassified)
             loss.backward()
@@ -47,12 +43,10 @@ def train_selective(model, train_loader, device, epochs=10):
 
             running_loss += loss.item()
 
-            # Calculate accuracy on misclassified samples
             preds_misclassified = torch.argmax(outputs, dim=1)
             correct += (preds_misclassified == labels_misclassified).sum().item()
             total += labels_misclassified.size(0)
 
-        # Calculate and store metrics
         epoch_loss = running_loss / len(train_loader)
         epoch_accuracy = correct / total if total > 0 else 0
         epoch_losses.append(epoch_loss)
@@ -63,5 +57,4 @@ def train_selective(model, train_loader, device, epochs=10):
     end_time = time.time()
     log_memory(start_time, end_time)
 
-    # Plot and save metrics
     plot_metrics(epoch_losses, epoch_accuracies, "Selective Training")
