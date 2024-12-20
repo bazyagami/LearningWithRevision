@@ -8,4 +8,3 @@ def get_pretrained_resnet(num_classes=100):
     in_features = model.fc.in_features
     model.fc = nn.Linear(in_features, num_classes)
     return model
-
