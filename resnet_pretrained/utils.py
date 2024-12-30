@@ -47,3 +47,5 @@ def plot_metrics(losses, accuracies, title):
     plt.tight_layout()
     plt.savefig(f'{title.lower().replace(" ", "_")}_metrics.png')
     plt.show()
+
+
