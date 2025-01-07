@@ -74,34 +74,30 @@ def plot_accuracy_time(accuracy, time_per_epoch, title="Accuracy and Time per Ep
     # Show the plot
     if save_path:
         plt.savefig(save_path)
-    plt.show()
+    # plt.show()
 
 
 
 def plot_accuracy_time_multi(model_name, accuracy, time_per_epoch, save_path="accuracy_vs_time_plot.png", data_file="model_data.json"):
-    # Calculate the cumulative training time
+   
     cumulative_time = [0] + [sum(time_per_epoch[:i + 1]) for i in range(len(time_per_epoch))]
     
-    # If the data file exists, load existing data
     if os.path.exists(data_file):
         with open(data_file, "r") as f:
             all_model_data = json.load(f)
     else:
         all_model_data = {}
 
-    # Add the new model data
     all_model_data[model_name] = {
-        "cumulative_time": cumulative_time[1:],  # Exclude the initial "0"
+        "cumulative_time": cumulative_time[1:],  
         "accuracy": accuracy
     }
 
-    # Save the updated data back to the file
     with open(data_file, "w") as f:
         json.dump(all_model_data, f, indent=4)
 
-    # Plot all models
     plt.figure(figsize=(8, 6))
-    colors = plt.cm.tab10.colors  # Use a colormap for distinct model plots
+    colors = plt.cm.tab10.colors  
     for idx, (name, data) in enumerate(all_model_data.items()):
         plt.plot(
             data["cumulative_time"],
@@ -111,13 +107,11 @@ def plot_accuracy_time_multi(model_name, accuracy, time_per_epoch, save_path="ac
             marker="o"
         )
 
-    # Add labels, title, legend, and grid
     plt.xlabel("Time (seconds)")
     plt.ylabel("Accuracy")
     plt.title("Accuracy vs Time for Multiple Models")
     plt.legend()
     plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
 
-    # Save the updated plot
     plt.savefig(save_path)
-    plt.show()
+    # plt.show()

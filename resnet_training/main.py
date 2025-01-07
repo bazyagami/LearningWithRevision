@@ -5,6 +5,7 @@ from model_zoo import mobilenet_v2, mobilenet_v3, resnet34, resnet50, resnet101
 from data import load_cifar100, load_mnist
 from baseline import train_baseline
 from selective_gradient import train_selective
+from test import test_model
 
 def main():
     parser = argparse.ArgumentParser(description="Train ResNet on CIFAR-100")
@@ -17,13 +18,19 @@ def main():
     parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions")
     parser.add_argument("--save_path", type=str, help="to save graphs")
     parser.add_argument("--threshold", type=float, help="threshold to remove samples")
+    parser.add_argument("--dataset", type=str, help="CIFAR or MNIST")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # train_loader, _ = load_cifar100()
-    train_loader, _ = load_mnist()
+    # train_loader, _ = load_mnist()
     pretrained = False
-    num_classes = 100
+    if args.dataset == "mnist":
+        num_classes = 10
+        train_loader, test_loader = load_mnist()
+    elif args.dataset == "cifar":
+        train_loader, test_loader = load_cifar100()
+        num_classes = 100
 
     if args.pretrained:
         pretrained = True
@@ -60,10 +67,13 @@ def main():
 
     if args.mode == "baseline":
         print("Training in baseline mode...")
-        train_baseline(args.model, model, train_loader, device, args.epoch, args.save_path)
+        trained_model = train_baseline(args.model, model, train_loader, device, args.epoch, args.save_path)
     elif args.mode == "selective_gradient":
         print("Training with selective gradient updates...")
-        train_selective(args.model, model, train_loader, device, args.epoch, args.save_path)
+        trained_model = train_selective(args.model, model, train_loader, device, args.epoch, args.save_path, args.threshold)
+    
+    test_accuracy = test_model(trained_model, test_loader, device)
+    print("Model accuracy:", test_accuracy)
 
 if __name__ == "__main__":
     main()

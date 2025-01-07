@@ -33,7 +33,8 @@ def train_baseline(model_name, model, train_loader, device, epochs, save_path):
             optimizer.step()
 
             running_loss += loss.item()
-
+            
+            outputs = model(inputs)
             preds = torch.argmax(outputs, dim=1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
@@ -59,3 +60,4 @@ def train_baseline(model_name, model, train_loader, device, epochs, save_path):
     save_path=save_path,
     data_file=save_path
     )
+    return model

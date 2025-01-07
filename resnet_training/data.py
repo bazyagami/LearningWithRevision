@@ -15,8 +15,9 @@ def load_cifar100(batch_size=128):
 
 def load_mnist(batch_size=128):
     transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=3),  
         transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))  # Normalize for single-channel (grayscale) MNIST
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)) 
     ])
     trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
     testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
