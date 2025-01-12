@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 
 def load_cifar100(batch_size=128):
     transform = transforms.Compose([
+        transforms.Resize((224,224)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])

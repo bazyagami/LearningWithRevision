@@ -3,3 +3,5 @@ data/
 *.txt
 *.png
 */results
+colab_resnet50.py
+results_new

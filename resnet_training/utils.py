@@ -49,6 +49,22 @@ def plot_metrics(losses, accuracies, title):
     plt.savefig(f'{title.lower().replace(" ", "_")}_metrics.png')
     plt.show()
 
+
+def plot_metrics_test(accuracies, title):
+    epochs = range(1, len(accuracies) + 1)
+    # Plotting accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, accuracies, label='Accuracy', color='green')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title(f'{title} - Accuracy')
+    plt.legend()
+    
+    # Save and show plots
+    plt.tight_layout()
+    plt.savefig(f'{title.lower().replace(" ", "_")}_metrics_test.png')
+    plt.show()
+
 def plot_accuracy_time(accuracy, time_per_epoch, title="Accuracy and Time per Epoch", save_path=None):
     epochs = range(1, len(accuracy) + 1)
 
@@ -115,3 +131,44 @@ def plot_accuracy_time_multi(model_name, accuracy, time_per_epoch, save_path="ac
 
     plt.savefig(save_path)
     # plt.show()
+
+
+def plot_accuracy_time_multi_test(model_name, accuracy, time_per_epoch, save_path="accuracy_vs_time_plot.png", data_file="model_data.json"):
+   
+    cumulative_time = [0] + [sum(time_per_epoch[:i + 1]) for i in range(len(time_per_epoch))]
+
+    data_file = data_file + "_test"
+    save_path = save_path + "_test" 
+    
+    if os.path.exists(data_file):
+        with open(data_file, "r") as f:
+            all_model_data = json.load(f)
+    else:
+        all_model_data = {}
+
+    all_model_data[model_name] = {
+        "cumulative_time": cumulative_time[1:],  
+        "accuracy": accuracy
+    }
+
+    with open(data_file, "w") as f:
+        json.dump(all_model_data, f, indent=4)
+
+    plt.figure(figsize=(8, 6))
+    colors = plt.cm.tab10.colors  
+    for idx, (name, data) in enumerate(all_model_data.items()):
+        plt.plot(
+            data["cumulative_time"],
+            data["accuracy"],
+            label=name,
+            color=colors[idx % len(colors)],
+            marker="o"
+        )
+
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Accuracy")
+    plt.title("Test Accuracy vs Time for Multiple Models")
+    plt.legend()
+    plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
+
+    plt.savefig(save_path)
