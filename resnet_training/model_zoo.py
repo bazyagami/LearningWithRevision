@@ -2,13 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torchvision.models import ViT_B_16_Weights
-
-
-# def get_pretrained_resnet(num_classes=100):
-#     model = models.resnet18(pretrained=True)  
-#     in_features = model.fc.in_features
-#     model.fc = nn.Linear(in_features, num_classes)
-#     return model
+import timm
 
 def mobilenet_v2(num_classes, pretrained):
     if pretrained:
@@ -83,3 +77,13 @@ def efficientnet_b0(num_classes, pretrained):
 
     in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, num_classes)
+    return model
+
+def efficientformer(num_classes, pretrained):
+    if pretrained:
+        model = timm.create_model('efficientformer_l1', pretrained=pretrained)
+    else:
+        model = timm.create_model('efficientformer_l1')
+    
+    model.reset_classifier(num_classes)
+    return model

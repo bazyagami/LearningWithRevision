@@ -1,7 +1,7 @@
 import argparse
 import torch
 from model import resnet18, efficientnet_b0
-from model_zoo import mobilenet_v2, mobilenet_v3, resnet18, resnet34, resnet50, resnet101, vit_b_16, efficientnet_b0
+from model_zoo import mobilenet_v2, mobilenet_v3, resnet18, resnet34, resnet50, resnet101, vit_b_16, efficientnet_b0, efficientformer
 from data import load_cifar100, load_mnist
 from baseline import train_baseline
 from selective_gradient import train_selective, train_selective_epoch, train_with_revision
@@ -13,7 +13,7 @@ def main():
                         help="Choose training mode: 'baseline' or 'selective_gradient'")
     parser.add_argument("--epoch", type=int, required=False, default=10,
                         help="Number of epochs to train for")
-    parser.add_argument("--model", type=str, choices=["resnet18", "resnet34", "resnet50", "resnet101", "efficientnet_b0", "mobilenet_v2", "mobilenet_v3", "vit_b_16"], required=True,
+    parser.add_argument("--model", type=str, choices=["resnet18", "resnet34", "resnet50", "resnet101", "efficientnet_b0", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer"], required=True,
                         help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', mobilenet_v3 or 'efficientnet_b0'")
     parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions")
     parser.add_argument("--save_path", type=str, help="to save graphs")
@@ -60,6 +60,8 @@ def main():
         model = resnet101(num_classes, pretrained)
     elif args.model == "vit_b_16":
         model = vit_b_16(num_classes, pretrained)
+    elif args.model == "efficientformer":
+        model = efficientformer(num_classes, pretrained)
 
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
