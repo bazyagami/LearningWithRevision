@@ -1,10 +1,10 @@
 import argparse
 import torch
 from model import resnet18, efficientnet_b0
-from model_zoo import mobilenet_v2, mobilenet_v3, resnet18, resnet34, resnet50, resnet101, vit_b_16, efficientnet_b0, efficientformer
+from model_zoo import ModelZoo
 from data import load_cifar100, load_mnist
 from baseline import train_baseline
-from selective_gradient import train_selective, train_selective_epoch, train_with_revision
+from selective_gradient import TrainRevision
 from test import test_model
 
 def main():
@@ -38,30 +38,31 @@ def main():
 
     if args.pretrained:
         pretrained = True
+    mz = ModelZoo(num_classes, pretrained)
 
     ###Models From Scratch###
     if args.model == "resnet18":
         # model = resnet18(num_classes=100)
-        model = resnet18(num_classes, pretrained)
+        model = mz.resnet18()
     elif args.model == "efficientnet_b0":
         # model = efficientnet_b0(num_classes=100)
-        model = efficientnet_b0(num_classes, pretrained)
+        model = mz.efficientnet_b0()
 
     ###PyTorch Models###
     elif args.model == "mobilenet_v2":
-        model = mobilenet_v2(num_classes, pretrained)
+        model = mz.mobilenet_v2()
     elif args.model == "mobilenet_v3":
-        model = mobilenet_v3(num_classes, pretrained)
+        model = mz.mobilenet_v3()
     elif args.model == "resnet34":
-        model = resnet34(num_classes, pretrained)
+        model = mz.resnet34()
     elif args.model == "resnet50":
-        model = resnet50(num_classes, pretrained)
+        model = mz.resnet50()
     elif args.model == "resnet101":
-        model = resnet101(num_classes, pretrained)
+        model = mz.resnet101()
     elif args.model == "vit_b_16":
-        model = vit_b_16(num_classes, pretrained)
+        model = mz.vit_b_16()
     elif args.model == "efficientformer":
-        model = efficientformer(num_classes, pretrained)
+        model = mz.efficientformer()
 
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,15 +80,17 @@ def main():
         print("Training in baseline mode...")
         trained_model = train_baseline(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path)
     elif args.mode == "selective_gradient":
+        train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
         print("Training with selective gradient updates...")
-        trained_model = train_selective(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
+        trained_model = train_revision.train_selective()
     elif args.mode == "selective_epoch":
+        train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
         print(f"Reintroducing correct examples and training...")
-        trained_model = train_selective_epoch(args.model,model,train_loader,
-                                              device,args.epoch,args.save_path,args.threshold)
+        trained_model = train_revision.train_selective_epoch()
     elif args.mode == "train_with_revision":
+        train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
         print(f"Training {args.mode}, will start revision after {args.start_revision}")
-        trained_model = train_with_revision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold, args.start_revision)
+        trained_model = train_revision.train_with_revision(args.start_revision)
 
     test_accuracy = test_model(trained_model, test_loader, device)
     print("Model accuracy:", test_accuracy)

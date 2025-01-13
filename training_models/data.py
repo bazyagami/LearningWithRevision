@@ -25,3 +25,10 @@ def load_mnist(batch_size=128):
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
     return train_loader, test_loader
+
+def load_imagenet(batch_size=16):
+    transform = transforms.Compose([transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    
+    trainset = torchvision.datasets.ImageNet(root='./imagenet', split="train")
+    ##TODO: download imagenet
