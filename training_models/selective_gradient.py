@@ -289,7 +289,7 @@ class TrainRevision:
                 total = 0
                 print(f"Epoch [{epoch+1/self.epochs}]")
                 progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), desc="Training")
-
+                
                 for batch_idx, (inputs, labels) in progress_bar:
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
                     

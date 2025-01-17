@@ -2,7 +2,7 @@ import argparse
 import torch
 from model import resnet18, efficientnet_b0
 from model_zoo import ModelZoo
-from data import load_cifar100, load_mnist
+from data import load_cifar100, load_mnist, load_imagenet
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
@@ -35,6 +35,9 @@ def main():
         else:
             train_loader, test_loader = load_cifar100()
         num_classes = 100
+    elif args.dataset == "imagenet":
+        num_classes = 1000
+        train_loader, test_loader = load_imagenet(args.batch_size)
 
     if args.pretrained:
         pretrained = True
@@ -92,8 +95,10 @@ def main():
         print(f"Training {args.mode}, will start revision after {args.start_revision}")
         trained_model = train_revision.train_with_revision(args.start_revision)
 
-    test_accuracy = test_model(trained_model, test_loader, device)
-    print("Model accuracy:", test_accuracy)
+    
+    torch.save(trained_model.state_dict(), "model_weights")
+    # test_accuracy = test_model(trained_model, test_loader, device)
+    # print("Model accuracy:", test_accuracy)
 
 if __name__ == "__main__":
     main()

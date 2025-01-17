@@ -6,3 +6,4 @@ data/
 colab_resnet50.py
 results_new
 resnet_pretrained/
+imagenet_results/
