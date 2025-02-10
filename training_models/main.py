@@ -13,7 +13,7 @@ def main():
                         help="Choose training mode: 'baseline' or 'selective_gradient'")
     parser.add_argument("--epoch", type=int, required=False, default=10,
                         help="Number of epochs to train for")
-    parser.add_argument("--model", type=str, choices=["resnet18", "resnet34", "resnet50", "resnet101", "efficientnet_b0", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer"], required=True,
+    parser.add_argument("--model", type=str, choices=["resnet18", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer"], required=True,
                         help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', mobilenet_v3 or 'efficientnet_b0'")
     parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions")
     parser.add_argument("--save_path", type=str, help="to save graphs")
@@ -66,6 +66,10 @@ def main():
         model = mz.vit_b_16()
     elif args.model == "efficientformer":
         model = mz.efficientformer()
+    elif args.model == "efficientnet_b7":
+        model = mz.efficientnet_b7()
+    elif args.model == "efficientnet_b4":
+        model = mz.efficientnet_b4()
 
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -96,7 +100,7 @@ def main():
         trained_model = train_revision.train_with_revision(args.start_revision)
 
     
-    torch.save(trained_model.state_dict(), "model_weights")
+    torch.save(trained_model.state_dict(), "model_weights/efficientnetb7_cifar_03.pth")
     # test_accuracy = test_model(trained_model, test_loader, device)
     # print("Model accuracy:", test_accuracy)
 

@@ -83,6 +83,29 @@ class ModelZoo:
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, self.num_classes)
         return model
+    
+    def efficientnet_b7(self):
+        if self.pretrained:
+            weights = models.EfficientNet_B7_Weights.DEFAULT
+            model = models.efficientnet_b7(weights=weights)
+        else: 
+            model = models.efficientnet_b7()
+
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, self.num_classes)
+        return model
+
+    def efficientnet_b4(self):
+        if self.pretrained:
+            weights = models.EfficientNet_B4_Weights.DEFAULT
+            model = models.efficientnet_b4(weights=weights)
+        else: 
+            model = models.efficientnet_b4()
+
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, self.num_classes)
+        return model
+
 
     def efficientformer(self):
         if self.pretrained:

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 import time
 from utils import log_memory, plot_metrics, plot_metrics_test, plot_accuracy_time_multi, plot_accuracy_time_multi_test
 from tqdm import tqdm
@@ -20,12 +21,13 @@ class TrainRevision:
         self.model.to(self.device)
         save_path = self.save_path
         criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
-        optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
+        # optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
         epoch_losses = []
         epoch_accuracies = []
         epoch_test_accuracies = []
-        removed_samples_batch = []
+        epoch_test_losses = []
         time_per_epoch = []
         start_time = time.time()
         for epoch in range(self.epochs):
@@ -115,8 +117,12 @@ class TrainRevision:
                     total += labels.size(0)
 
             accuracy = correct / total
-            print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}")
+            val_loss = criterion(correct, total)
+
+            print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+            scheduler.step(val_loss)
             epoch_test_accuracies.append(accuracy)
+            epoch_test_losses.append(val_loss)
             
 
         end_time = time.time()
@@ -270,12 +276,17 @@ class TrainRevision:
         self.model.to(self.device)
         
         criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+        # optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
+        #as per implementation LR=0.045, they use 16 GPU. https://discuss.pytorch.org/t/training-mobilenet-on-imagenet/174391/6 from this blog
+        #we use the idea to divide the learning rate by the number of GPUs. 
+        # optimizer = optim.RMSprop(self.model.parameters(), weight_decay=0.00004, momentum=0.9, lr=0.0028125)   
         optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
+        scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
         epoch_losses = []
         epoch_accuracies = []
         epoch_test_accuracies = []
-        removed_samples_batch = []
+        epoch_test_losses = []
         time_per_epoch = []
         start_time = time.time()
         for epoch in range(self.epochs):
@@ -356,18 +367,26 @@ class TrainRevision:
                 self.model.eval()
                 correct = 0
                 total = 0
+                test_loss = 0.0
                 with torch.no_grad():
                     for batch in tqdm(self.test_loader, desc="Evaluating"):
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
+
+                        batch_loss = criterion(outputs, labels)
+                        test_loss+=batch_loss.item()
+
                         predictions = torch.argmax(outputs, dim=-1)
                         correct += (predictions == labels).sum().item()
                         total += labels.size(0)
 
                 accuracy = correct / total
-                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}")
+                val_loss = test_loss / len(self.test_loader)
+                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+                scheduler.step(val_loss)
                 epoch_test_accuracies.append(accuracy)
+                epoch_test_losses.append(val_loss)
 
             else:
                 self.model.train()
@@ -409,18 +428,26 @@ class TrainRevision:
                 self.model.eval()
                 test_correct = 0
                 test_total = 0
+                test_loss = 0.0
                 with torch.no_grad():
                     for batch in tqdm(self.test_loader, desc="Evaluating"):
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
+
+                        batch_loss = criterion(outputs, labels)
+                        test_loss+=batch_loss.item()
+
                         predictions = torch.argmax(outputs, dim=-1)
                         test_correct += (predictions == labels).sum().item()
                         test_total += labels.size(0)
 
                 accuracy = test_correct / test_total
-                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}")
+                val_loss = test_loss / len(self.test_loader)
+                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+                scheduler.step(val_loss)
                 epoch_test_accuracies.append(accuracy)
+                epoch_test_losses.append(val_loss)
 
 
         end_time = time.time()

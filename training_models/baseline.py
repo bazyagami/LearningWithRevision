@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 import time
 from utils import log_memory, plot_metrics, plot_metrics_test, plot_accuracy_time_multi, plot_accuracy_time_multi_test
 from tqdm import tqdm
@@ -10,11 +11,15 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
     model.to(device)
     
     criterion = nn.CrossEntropyLoss()
-    # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    # optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
+    
+    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
     optimizer = optim.AdamW(model.parameters(), lr=3e-4)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
     epoch_losses = []
     epoch_accuracies = []
     epoch_test_accuracies = []
+    epoch_test_losses = []
     time_per_epoch = []
     start_time = time.time()
 
@@ -59,18 +64,24 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
         model.eval()
         test_correct = 0
         test_total = 0
+        test_loss = 0.0
         with torch.no_grad():
             for batch in tqdm(test_loader, desc="Evaluating"):
                 inputs = batch[0].to(device)
                 labels = batch[1].to(device)
                 outputs = model(inputs)
+                batch_loss = criterion(outputs, labels)
+                test_loss+=batch_loss.item()
                 predictions = torch.argmax(outputs, dim=-1)
                 test_correct += (predictions == labels).sum().item()
                 test_total += labels.size(0)
 
         accuracy = test_correct / test_total
-        print(f"Epoch {epoch + 1}/{epochs}, Test Accuracy: {accuracy:.4f}")
+        val_loss = test_loss/len(test_loader)
+        print(f"Epoch {epoch + 1}/{epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+        scheduler.step(val_loss)
         epoch_test_accuracies.append(accuracy)
+        epoch_test_losses.append(val_loss)
 
     end_time = time.time()
     log_memory(start_time, end_time)
