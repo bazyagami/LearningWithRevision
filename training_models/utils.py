@@ -125,12 +125,14 @@ def plot_accuracy_time_multi(model_name, accuracy, time_per_epoch, save_path="ac
     # plt.show()
 
 
-def plot_accuracy_time_multi_test(model_name, accuracy, time_per_epoch, save_path="accuracy_vs_time_plot.png", data_file="model_data.json"):
+def plot_accuracy_time_multi_test(model_name, accuracy, time_per_epoch, samples_per_epoch, threshold, save_path="accuracy_vs_time_plot.png", data_file="model_data.json"):
    
     cumulative_time = [0] + [sum(time_per_epoch[:i + 1]) for i in range(len(time_per_epoch))]
 
     data_file = data_file + "_test"
     save_path = save_path + "_test" 
+    threshold_str = f"{int(threshold * 100):02d}"
+    epoch_save = save_path + f"_epochs_{threshold_str}"
     
     if os.path.exists(data_file):
         with open(data_file, "r") as f:
@@ -164,3 +166,30 @@ def plot_accuracy_time_multi_test(model_name, accuracy, time_per_epoch, save_pat
     plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
 
     plt.savefig(save_path)
+
+
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(range(1, len(samples_per_epoch) + 1), samples_per_epoch, marker="o", linestyle="-", color="b", label="Samples Used")
+    plt.xlabel("Epoch")
+    plt.ylabel("Number of Samples Used")
+    plt.title("Number of Samples Used Per Epoch")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(epoch_save)
+
+
+# def plot_epoch_samples(samples_per_epoch, save_path, threshold):
+#     threshold_str = f"{int(threshold * 100):02d}"
+#     # save_path = save_path + f"\samples_per_epoch_{threshold_str}"
+#     save_path = os.path.join(save_path, f"samples_per_epoch_{threshold_str}")
+
+#     os.makedirs(os.path.dirname(save_path), exist_ok=True)
+#     plt.figure(figsize=(8, 5))
+#     plt.plot(range(1, len(samples_per_epoch) + 1), samples_per_epoch, marker="o", linestyle="-", color="b", label="Samples Used")
+#     plt.xlabel("Epoch")
+#     plt.ylabel("Number of Samples Used")
+#     plt.title("Number of Samples Used Per Epoch")
+#     plt.legend()
+#     plt.grid(True)
+#     plt.savefig(save_path)

@@ -22,6 +22,7 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
     epoch_test_losses = []
     time_per_epoch = []
     start_time = time.time()
+    num_step = 0
 
     for epoch in range(epochs):
         model.train()
@@ -43,6 +44,7 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            num_step+=len(outputs)
 
             running_loss += loss.item()
             
@@ -85,6 +87,7 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
 
     end_time = time.time()
     log_memory(start_time, end_time)
+    print(num_step)
 
     plot_metrics(epoch_losses, epoch_accuracies, "Baseline Training")
     plot_metrics_test(epoch_test_accuracies, "Baseline Training")

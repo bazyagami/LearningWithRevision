@@ -5,6 +5,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 import time
 from utils import log_memory, plot_metrics, plot_metrics_test, plot_accuracy_time_multi, plot_accuracy_time_multi_test
 from tqdm import tqdm
+import json
+import os
 
 class TrainRevision:
     def __init__(self, model_name, model, train_loader, test_loader, device, epochs, save_path, threshold):
@@ -270,7 +272,7 @@ class TrainRevision:
         return self.model
 
 
-    def train_with_revision(self, start_revision):
+    def train_with_revision(self, start_revision, task):
 
         save_path = self.save_path
         self.model.to(self.device)
@@ -289,7 +291,10 @@ class TrainRevision:
         epoch_test_losses = []
         time_per_epoch = []
         start_time = time.time()
+        num_step = 0
+        samples_used_per_epoch = []
         for epoch in range(self.epochs):
+            samples_used = 0
             if epoch < start_revision : 
                 self.model.train()
                 epoch_start_time = time.time()
@@ -306,6 +311,8 @@ class TrainRevision:
                     
                     with torch.no_grad():
                         outputs = self.model(inputs)
+                        # if task == "segmentation":
+                        #     outputs = outputs['out']
                         preds = torch.argmax(outputs, dim=1)
                         
                         if self.threshold == 0:
@@ -336,8 +343,12 @@ class TrainRevision:
                     optimizer.zero_grad()
 
                     outputs_misclassified = self.model(inputs_misclassified)
+                    # if task == "segmentation":
+                    #     outputs_misclassified = outputs_misclassified['out']
                     # outputs_misclassified = outputs[mask]
                     loss = criterion(outputs_misclassified, labels_misclassified)
+                    num_step+=len(outputs_misclassified)
+                    samples_used+=len(outputs_misclassified)
                     loss.backward()
                     optimizer.step()
 
@@ -373,6 +384,8 @@ class TrainRevision:
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
+                        # if task == "segmentation":
+                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -404,13 +417,19 @@ class TrainRevision:
                     optimizer.zero_grad()
 
                     outputs = self.model(inputs)
+                    # if task == "segmentation":
+                    #     outputs = outputs['out']
                     loss = criterion(outputs, labels)
+                    num_step+=len(outputs)
+                    samples_used+=len(outputs)
                     loss.backward()
                     optimizer.step()
 
                     running_loss += loss.item()
                     
                     outputs = self.model(inputs)
+                    # if task == "segmentation":
+                    #     outputs = outputs['out']
                     preds = torch.argmax(outputs, dim=1)
                     correct += (preds == labels).sum().item()
                     total += labels.size(0)
@@ -434,6 +453,8 @@ class TrainRevision:
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
+                        # if task == "segmentation":
+                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -448,13 +469,22 @@ class TrainRevision:
                 scheduler.step(val_loss)
                 epoch_test_accuracies.append(accuracy)
                 epoch_test_losses.append(val_loss)
+            
+            samples_used_per_epoch.append(samples_used)
 
 
         end_time = time.time()
         log_memory(start_time, end_time)
+        print(num_step)
+
+        # samples_file = save_path + f"/samples_per_epoch_{self.threshold}.json"
+        # with open(samples_file, "w") as f:
+        #     json.dump(samples_used_per_epoch, f, indent=4)
+
+
 
         plot_metrics(epoch_losses, epoch_accuracies, "Revision")
-        plot_metrics_test(epoch_test_accuracies, "Revisiong Test")
+        plot_metrics_test(epoch_test_accuracies, "Revision Test")
         # plot_accuracy_time(epoch_accuracies, time_per_epoch, title="Accuracy and Time per Epoch", save_path=save_path)
         plot_accuracy_time_multi(
         model_name=self.model_name,  
@@ -467,6 +497,8 @@ class TrainRevision:
             model_name = self.model_name,
             accuracy=epoch_test_accuracies,
             time_per_epoch=time_per_epoch,
+            samples_per_epoch=samples_used_per_epoch,
+            threshold=self.threshold,
             save_path=save_path,
             data_file=save_path
         )
