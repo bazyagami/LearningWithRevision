@@ -131,7 +131,10 @@ def plot_accuracy_time_multi_test(model_name, accuracy, time_per_epoch, samples_
 
     data_file = data_file + "_test"
     save_path = save_path + "_test" 
-    threshold_str = f"{int(threshold * 100):02d}"
+    if threshold:
+        threshold_str = f"{int(threshold * 100):02d}"
+    else:
+        threshold_str = threshold
     epoch_save = save_path + f"_epochs_{threshold_str}"
     
     if os.path.exists(data_file):

@@ -23,8 +23,10 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
     time_per_epoch = []
     start_time = time.time()
     num_step = 0
+    samples_used_per_epoch = []
 
     for epoch in range(epochs):
+        samples_used = 0
         model.train()
         epoch_start_time = time.time()
         running_loss = 0.0
@@ -45,6 +47,7 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
             loss.backward()
             optimizer.step()
             num_step+=len(outputs)
+            samples_used+=len(outputs)
 
             running_loss += loss.item()
             
@@ -86,11 +89,12 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
         epoch_test_losses.append(val_loss)
 
     end_time = time.time()
+    samples_used_per_epoch.append(samples_used)
     log_memory(start_time, end_time)
     print(num_step)
 
-    plot_metrics(epoch_losses, epoch_accuracies, "Baseline Training")
-    plot_metrics_test(epoch_test_accuracies, "Baseline Training")
+    # plot_metrics(epoch_losses, epoch_accuracies, "Baseline Training")
+    # plot_metrics_test(epoch_test_accuracies, "Baseline Training")
     plot_accuracy_time_multi(
     model_name=model_name,  
     accuracy=epoch_accuracies,
@@ -102,6 +106,8 @@ def train_baseline(model_name, model, train_loader, test_loader, device, epochs,
         model_name = model_name,
         accuracy=epoch_test_accuracies,
         time_per_epoch=time_per_epoch,
+        samples_per_epoch=samples_used_per_epoch,
+        threshold=None,
         save_path=save_path,
         data_file=save_path
     )
