@@ -1,8 +1,11 @@
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import torch.utils.data as data
 import torchvision.models as models
 from imbalance_cifar import IMBALANCECIFAR100, IMBALANCECIFAR10
+from medmnist import NoduleMNIST3D, INFO, Evaluator
+import medmnist
 
 def load_cifar100(long_tail, batch_size=128):
     cls_num_list = None
@@ -112,4 +115,15 @@ def load_cityscapes(data_dir="D:\LearningWithRevision\mmsegmentation\data\citysc
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    return train_loader, test_loader
+
+def load_medmnist3D(batch_size=128):
+    data_flag = "organmnist3d"
+    info = INFO[data_flag]
+    DataClass = getattr(medmnist, info['python_class'])
+    train_dataset = DataClass(split='train', download=True, size=64)
+    train_loader = data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    test_dataset = DataClass(split="test", download=True, size=64)
+    test_loader = data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+
     return train_loader, test_loader

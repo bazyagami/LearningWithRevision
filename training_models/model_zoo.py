@@ -40,6 +40,23 @@ class ModelZoo:
         in_features = model.fc.in_features
         model.fc = nn.Linear(in_features, self.num_classes)
         return model
+    
+    def resnet18_3d(self):
+        if self.pretrained:
+            model = models.video.r3d_18(pretrained=True)
+        else:
+            model = models.video.r3d_18()
+        in_features = model.fc.in_features
+        model.fc = nn.Linear(in_features, self.num_classes)
+        model.stem[0] = nn.Conv3d(
+                        in_channels=1, 
+                        out_channels=64,
+                        kernel_size=(3, 7, 7),
+                        stride=(1, 2, 2),
+                        padding=(1, 3, 3),
+                        bias=False
+                    )
+        return model
 
     def resnet34(self):
         if self.pretrained:

@@ -2,7 +2,7 @@ import argparse
 import torch
 from model import resnet18, efficientnet_b0
 from model_zoo import ModelZoo
-from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10
+from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
@@ -12,13 +12,13 @@ from losscape.create_landscape import create_3D_losscape
 
 def main():
     parser = argparse.ArgumentParser(description="Train ResNet on CIFAR-100")
-    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples"], required=True,
+    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random"], required=True,
                         help="Choose training mode: 'baseline' or 'selective_gradient'")
     parser.add_argument("--epoch", type=int, required=False, default=10,
                         help="Number of epochs to train for")
     parser.add_argument("--task", type=str, required=True, default="classification",
                         help="segmentation or classification")
-    parser.add_argument("--model", type=str, choices=["resnet18", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer", "segformer_b2"], required=True,
+    parser.add_argument("--model", type=str, choices=["resnet18", "resnet_3d", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer", "segformer_b2"], required=True,
                         help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', mobilenet_v3 or 'efficientnet_b0'")
     parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions")
     parser.add_argument("--save_path", type=str, help="to save graphs")
@@ -52,6 +52,9 @@ def main():
     elif args.dataset == "cityscapes":
         num_classes = 19
         train_loader, test_loader = load_cityscapes()
+    elif args.dataset == "organ_medmnist3d":
+        num_classes = 11
+        train_loader, test_loader = load_medmnist3D(args.batch_size)
 
     if args.pretrained:
         pretrained = True
@@ -93,6 +96,8 @@ def main():
         # model = mz.mmseg_model()
         # model = mz.lraspp_mobilenet_v3_large()
         model = mz.segformer()
+    elif args.model == "resnet_3d":
+        model = mz.resnet18_3d()
 
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -129,13 +134,24 @@ def main():
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_revision(args.start_revision, args.task)
-            create_3D_losscape(trained_model, train_loader, output_vtp=True)
+            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_samples":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_samples(args.start_revision, args.task)
-            create_3D_losscape(trained_model, train_loader, output_vtp=True)
+            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
+            print("Number of steps : ", num_step)
+        elif args.mode == "train_with_revision_3d":
+            train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
+            print(f"Training {args.mode}, will start revision after {args.start_revision}")
+            trained_model, num_step = train_revision.train_with_revision_3d(args.start_revision, args.task)
+            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
+            print("Number of steps : ", num_step)
+        elif args.mode == "train_with_random":
+            train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
+            print(f"Training {args.mode}, will start revision after {args.start_revision}")
+            trained_model, num_step = train_revision.train_with_revision_3d(args.start_revision, args.task)
             print("Number of steps : ", num_step)
 
     
