@@ -283,7 +283,6 @@ class TrainRevision:
         #we use the idea to divide the learning rate by the number of GPUs. 
         # optimizer = optim.RMSprop(self.model.parameters(), weight_decay=0.00004, momentum=0.9, lr=0.0028125)   
         optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
-        # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
         scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
         epoch_losses = []
         epoch_accuracies = []
@@ -311,8 +310,6 @@ class TrainRevision:
                     
                     with torch.no_grad():
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
                         preds = torch.argmax(outputs, dim=1)
                         
                         if self.threshold == 0:
@@ -328,24 +325,9 @@ class TrainRevision:
                     inputs_misclassified = inputs[mask]
                     labels_misclassified = labels[mask]
 
-                    # if inputs_misclassified.size(0) < 2:
-                    #     continue
-
-                    # if inputs_misclassified.size(0) < 2:
-                    #     required_samples = 2 - inputs_misclassified.size(0)
-                    #     correctly_classified_mask = ~mask
-                    #     correct_inputs = inputs[correctly_classified_mask][:required_samples]
-                    #     correct_labels = labels[correctly_classified_mask][:required_samples]
-
-                    #     inputs_misclassified = torch.cat((inputs_misclassified, correct_inputs), dim=0)
-                    #     labels_misclassified = torch.cat((labels_misclassified, correct_labels), dim=0)
-
                     optimizer.zero_grad()
 
                     outputs_misclassified = self.model(inputs_misclassified)
-                    # if task == "segmentation":
-                    #     outputs_misclassified = outputs_misclassified['out']
-                    # outputs_misclassified = outputs[mask]
                     loss = criterion(outputs_misclassified, labels_misclassified)
                     num_step+=len(outputs_misclassified)
                     samples_used+=len(outputs_misclassified)
@@ -354,18 +336,11 @@ class TrainRevision:
 
                     running_loss += loss.item()
 
-                    # preds_misclassified = torch.argmax(outputs_misclassified, dim=1)
-                    # correct += (preds_misclassified == labels_misclassified).sum().item()
-                    # # total += labels_misclassified.size(0)
-                    # with torch.no_grad():
-                        # outputs = model(inputs)
-                        # preds = torch.argmax(outputs, dim=1)
                     total_correct += (preds == labels).sum().item()
                     total_samples += labels.size(0)
                     progress_bar.set_postfix({"Loss": loss.item()})
 
                 epoch_loss = running_loss / len(self.train_loader)
-                # epoch_accuracy = correct / total if total > 0 else 0
                 epoch_accuracy = total_correct/total_samples if total_samples > 0 else 0 
                 epoch_losses.append(epoch_loss)
                 epoch_accuracies.append(epoch_accuracy)
@@ -384,8 +359,6 @@ class TrainRevision:
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -417,8 +390,6 @@ class TrainRevision:
                     optimizer.zero_grad()
 
                     outputs = self.model(inputs)
-                    # if task == "segmentation":
-                    #     outputs = outputs['out']
                     loss = criterion(outputs, labels)
                     num_step+=len(outputs)
                     samples_used+=len(outputs)
@@ -428,8 +399,6 @@ class TrainRevision:
                     running_loss += loss.item()
                     
                     outputs = self.model(inputs)
-                    # if task == "segmentation":
-                    #     outputs = outputs['out']
                     preds = torch.argmax(outputs, dim=1)
                     correct += (preds == labels).sum().item()
                     total += labels.size(0)
@@ -453,8 +422,6 @@ class TrainRevision:
                         inputs = batch[0].to(self.device)
                         labels = batch[1].to(self.device)
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -477,11 +444,6 @@ class TrainRevision:
         log_memory(start_time, end_time)
         print(num_step)
 
-
-
-
-        # plot_metrics(epoch_losses, epoch_accuracies, "Revision")
-        # plot_metrics_test(epoch_test_accuracies, "Revision Test")
         plot_accuracy_time_multi(
         model_name=self.model_name,  
         accuracy=epoch_accuracies,
@@ -710,12 +672,9 @@ class TrainRevision:
         self.model.to(self.device)
         
         criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
         #as per implementation LR=0.045, they use 16 GPU. https://discuss.pytorch.org/t/training-mobilenet-on-imagenet/174391/6 from this blog
         #we use the idea to divide the learning rate by the number of GPUs. 
-        # optimizer = optim.RMSprop(self.model.parameters(), weight_decay=0.00004, momentum=0.9, lr=0.0028125)   
         optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
-        # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
         scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
         epoch_losses = []
         epoch_accuracies = []
@@ -743,8 +702,6 @@ class TrainRevision:
                     
                     with torch.no_grad():
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
                         preds = torch.argmax(outputs, dim=1)
                         
                         if self.threshold == 0:
@@ -760,24 +717,9 @@ class TrainRevision:
                     inputs_misclassified = inputs[mask]
                     labels_misclassified = labels[mask]
 
-                    # if inputs_misclassified.size(0) < 2:
-                    #     continue
-
-                    # if inputs_misclassified.size(0) < 2:
-                    #     required_samples = 2 - inputs_misclassified.size(0)
-                    #     correctly_classified_mask = ~mask
-                    #     correct_inputs = inputs[correctly_classified_mask][:required_samples]
-                    #     correct_labels = labels[correctly_classified_mask][:required_samples]
-
-                    #     inputs_misclassified = torch.cat((inputs_misclassified, correct_inputs), dim=0)
-                    #     labels_misclassified = torch.cat((labels_misclassified, correct_labels), dim=0)
-
                     optimizer.zero_grad()
 
                     outputs_misclassified = self.model(inputs_misclassified)
-                    # if task == "segmentation":
-                    #     outputs_misclassified = outputs_misclassified['out']
-                    # outputs_misclassified = outputs[mask]
                     loss = criterion(outputs_misclassified, labels_misclassified)
                     num_step+=len(outputs_misclassified)
                     samples_used+=len(outputs_misclassified)
@@ -786,18 +728,11 @@ class TrainRevision:
 
                     running_loss += loss.item()
 
-                    # preds_misclassified = torch.argmax(outputs_misclassified, dim=1)
-                    # correct += (preds_misclassified == labels_misclassified).sum().item()
-                    # # total += labels_misclassified.size(0)
-                    # with torch.no_grad():
-                        # outputs = model(inputs)
-                        # preds = torch.argmax(outputs, dim=1)
                     total_correct += (preds == labels).sum().item()
                     total_samples += labels.size(0)
                     progress_bar.set_postfix({"Loss": loss.item()})
 
                 epoch_loss = running_loss / len(self.train_loader)
-                # epoch_accuracy = correct / total if total > 0 else 0
                 epoch_accuracy = total_correct/total_samples if total_samples > 0 else 0 
                 epoch_losses.append(epoch_loss)
                 epoch_accuracies.append(epoch_accuracy)
@@ -816,8 +751,6 @@ class TrainRevision:
                         inputs = batch[0].to(self.device).float()
                         labels = batch[1].to(self.device).long().view(-1)
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -849,8 +782,6 @@ class TrainRevision:
                     optimizer.zero_grad()
 
                     outputs = self.model(inputs)
-                    # if task == "segmentation":
-                    #     outputs = outputs['out']
                     loss = criterion(outputs, labels)
                     num_step+=len(outputs)
                     samples_used+=len(outputs)
@@ -860,8 +791,6 @@ class TrainRevision:
                     running_loss += loss.item()
                     
                     outputs = self.model(inputs)
-                    # if task == "segmentation":
-                    #     outputs = outputs['out']
                     preds = torch.argmax(outputs, dim=1)
                     correct += (preds == labels).sum().item()
                     total += labels.size(0)
@@ -885,8 +814,6 @@ class TrainRevision:
                         inputs = batch[0].to(self.device).float()
                         labels = batch[1].to(self.device).long().view(-1)
                         outputs = self.model(inputs)
-                        # if task == "segmentation":
-                        #     outputs = outputs['out']
 
                         batch_loss = criterion(outputs, labels)
                         test_loss+=batch_loss.item()
@@ -965,7 +892,7 @@ class TrainRevision:
             progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), desc="Training")
 
             if epoch < start_revision:
-                decay_factor = 0.95 ** epoch  # e.g., 0.9^epoch
+                decay_factor = 0.95 ** epoch  ##percentage to be sampled
                 for batch_idx, (inputs, labels) in progress_bar:
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
                     batch_size = inputs.size(0)
@@ -1022,7 +949,6 @@ class TrainRevision:
 
             print(f"Epoch [{epoch+1}/{self.epochs}], Loss: {epoch_loss:.4f}, Accuracy: {epoch_accuracy:.4f}")
 
-            # Evaluation
             self.model.eval()
             test_correct = 0
             test_total = 0

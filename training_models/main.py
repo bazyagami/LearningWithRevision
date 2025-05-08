@@ -7,7 +7,6 @@ from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
 from longtail_train import train_baseline_longtail, train_with_revision_longtail
-from losscape.create_landscape import create_3D_losscape
 
 
 def main():
@@ -121,7 +120,6 @@ def main():
         if args.mode == "baseline":
             print("Training in baseline mode...")
             trained_model = train_baseline(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path)
-            create_3D_losscape(trained_model, train_loader, output_vtp=True)
         elif args.mode == "selective_gradient":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print("Training with selective gradient updates...")
@@ -134,19 +132,16 @@ def main():
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_revision(args.start_revision, args.task)
-            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_samples":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_samples(args.start_revision, args.task)
-            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_revision_3d":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_revision_3d(args.start_revision, args.task)
-            # create_3D_losscape(trained_model, train_loader, output_vtp=True)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_random":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
@@ -155,9 +150,5 @@ def main():
             print("Number of steps : ", num_step)
 
     
-    # torch.save(trained_model.state_dict(), "model_weights/visiontrans_cifar10_03.pth")
-    # test_accuracy = test_model(trained_model, test_loader, device)
-    # print("Model accuracy:", test_accuracy)
-
 if __name__ == "__main__":
     main()
