@@ -17,9 +17,10 @@ def main():
                         help="Number of epochs to train for")
     parser.add_argument("--task", type=str, required=True, default="classification",
                         help="segmentation or classification")
-    parser.add_argument("--model", type=str, choices=["resnet18", "resnet_3d", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "efficientformer", "segformer_b2"], required=True,
-                        help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', mobilenet_v3 or 'efficientnet_b0'")
-    parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions")
+    parser.add_argument("--model", type=str, choices=["resnet18", "resnet_3d", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "mae_vit_b_16", "efficientformer", "segformer_b2"], required=True,
+                        help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', 'mobilenet_v3', 'efficientnet_b0', 'vit_b_16', 'mae_vit_b_16'")
+    parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions (applies to torchvision models, not MAE)")
+    parser.add_argument("--mae_checkpoint", type=str, default=None, help="Path to MAE pretrained checkpoint file (used with --model mae_vit_b_16)")
     parser.add_argument("--save_path", type=str, help="to save graphs")
     parser.add_argument("--threshold", type=float, help="threshold to remove samples")
     parser.add_argument("--epoch_threshold", type=int, help="threshold to reintroduce correct samples in epoch")
@@ -47,7 +48,8 @@ def main():
         num_classes = 10
     elif args.dataset == "imagenet":
         num_classes = 1000
-        train_loader, test_loader = load_imagenet(args.batch_size)
+        train_loader, test_loader = load_imagenet(args.batch_size, path='/root/autodl-tmp/imagenet')
+        # train_loader, test_loader = load_imagenet(args.batch_size)
     elif args.dataset == "cityscapes":
         num_classes = 19
         train_loader, test_loader = load_cityscapes()
@@ -84,6 +86,15 @@ def main():
         model = mz.resnet101()
     elif args.model == "vit_b_16":
         model = mz.vit_b_16()
+    elif args.model == "mae_vit_b_16":
+        if not args.mae_checkpoint:
+            parser.error("--mae_checkpoint is required when using --model mae_vit_b_16")
+        # The 'pretrained' flag for ModelZoo is not directly used by mae_vit_b_16,
+        # as it loads weights from the checkpoint_path.
+        # However, ModelZoo still needs to be initialized.
+        # We can pass False for pretrained here, or adjust ModelZoo if needed.
+        # For simplicity, let's assume ModelZoo's pretrained flag is for its other models.
+        model = mz.mae_vit_b_16(checkpoint_path=args.mae_checkpoint)
     elif args.model == "efficientformer":
         model = mz.efficientformer()
     elif args.model == "efficientnet_b7":
