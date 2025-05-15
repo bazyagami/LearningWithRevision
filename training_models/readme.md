@@ -14,17 +14,17 @@ Running the baseline (example: model, save_path, dataset and batch size can be c
 python .\main.py --model mobilenet_v2 --mode baseline --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --task classification 
 ```
 
-Running the threshold sampling method:
+Running the Difficulty-Based Progressive Dropout (DBPD):
 ```
 python .\main.py --model mobilenet_v2 --mode train_with_revision --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
 ```
 
-Running the random sampling method : 
+Running the Scheduled Match Random Dropout (SMRD) : 
 ```
 python .\main.py --model mobilenet_v2 --mode train_with_samples --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
 ```
 
-Running the percentage sample method : 
+Running the Scalar Random Dropout (SRD): 
 ```
 python .\main.py --model mobilenet_v2 --mode train_with_random --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
 ```
