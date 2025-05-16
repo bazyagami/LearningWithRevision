@@ -5,6 +5,7 @@ from data import load_cifar100, load_mnist, load_imagenet, load_cifar10, load_me
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 
+
 def main():
     parser = argparse.ArgumentParser(description="Train ResNet on CIFAR-100")
     parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random"], required=True,
@@ -97,6 +98,7 @@ def main():
 
     if args.mode == "baseline":
         args.model = args.model + "_" + "baseline"
+
     
     if args.mode == "baseline":
         print("Training in baseline mode...")
