@@ -24,7 +24,7 @@ def load_cifar100(long_tail, batch_size=128):
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
-    return train_loader, test_loader, cls_num_list
+    return train_loader, test_loader, cls_num_list, len(trainset)
 
 def load_cifar10(long_tail, batch_size=128):
     cls_num_list = None
@@ -43,7 +43,8 @@ def load_cifar10(long_tail, batch_size=128):
     testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
-    return train_loader, test_loader, cls_num_list
+    return train_loader, test_loader, cls_num_list, len(trainset)
+
 
 def load_mnist(batch_size=128):
     transform = transforms.Compose([
@@ -55,7 +56,8 @@ def load_mnist(batch_size=128):
     testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
-    return train_loader, test_loader
+    return train_loader, test_loader, len(trainset)
+
 
 def load_imagenet(batch_size=16):
     print("Performing transformations")
@@ -79,7 +81,8 @@ def load_imagenet(batch_size=16):
     print("loading the dataset")
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(valset, batch_size=batch_size, shuffle=True)
-    return train_loader, test_loader
+    return train_loader, test_loader, len(trainset)
+
     ##TODO: download imagenet
 
 def load_cityscapes(data_dir="D:\LearningWithRevision\mmsegmentation\data\cityscapes", batch_size=8):
@@ -126,4 +129,5 @@ def load_medmnist3D(batch_size=128):
     test_dataset = DataClass(split="test", download=True, size=64)
     test_loader = data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, len(train_dataset)
+

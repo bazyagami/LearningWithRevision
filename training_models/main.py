@@ -38,23 +38,23 @@ def main():
         train_loader, test_loader = load_mnist()
     elif args.dataset == "cifar":
         if args.batch_size:
-            train_loader, test_loader, cls_num_list = load_cifar100(args.long_tail, args.batch_size)
+            train_loader, test_loader, cls_num_list, data_size = load_cifar100(args.long_tail, args.batch_size)
         else:
-            train_loader, test_loader = load_cifar100(args.long_tail)
+            train_loader, test_loader, cls_num_list, data_size = load_cifar100(args.long_tail)
 
         num_classes = 100
     elif args.dataset == "cifar10":
-        train_loader, test_loader, cls_num_list = load_cifar10(args.long_tail, args.batch_size)
+        train_loader, test_loader, cls_num_list, data_size = load_cifar10(args.long_tail, args.batch_size)
         num_classes = 10
     elif args.dataset == "imagenet":
         num_classes = 1000
-        train_loader, test_loader = load_imagenet(args.batch_size)
+        train_loader, test_loader, data_size = load_imagenet(args.batch_size)
     elif args.dataset == "cityscapes":
         num_classes = 19
         train_loader, test_loader = load_cityscapes()
     elif args.dataset == "organ_medmnist3d":
         num_classes = 11
-        train_loader, test_loader = load_medmnist3D(args.batch_size)
+        train_loader, test_loader, data_size = load_medmnist3D(args.batch_size)
 
     if args.pretrained:
         pretrained = True
@@ -158,7 +158,9 @@ def main():
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_revision_3d(args.start_revision, args.task)
             print("Number of steps : ", num_step)
-
+    
+    eff_epoch = int(num_step/data_size)
+    print("Effective Epochs: ", eff_epoch)
     
 if __name__ == "__main__":
     main()
