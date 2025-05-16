@@ -277,7 +277,11 @@ class TrainRevision:
         save_path = self.save_path
         self.model.to(self.device)
         
-        criterion = nn.CrossEntropyLoss() 
+        criterion = nn.CrossEntropyLoss()
+        # optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
+        #as per implementation LR=0.045, they use 16 GPU. https://discuss.pytorch.org/t/training-mobilenet-on-imagenet/174391/6 from this blog
+        #we use the idea to divide the learning rate by the number of GPUs. 
+        # optimizer = optim.RMSprop(self.model.parameters(), weight_decay=0.00004, momentum=0.9, lr=0.0028125)   
         optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
         scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
         epoch_losses = []
