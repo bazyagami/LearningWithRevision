@@ -165,6 +165,7 @@ def main():
             print("Number of steps : ", num_step)
     
     eff_epoch = int(num_step/data_size)
+    
     print("Effective Epochs: ", eff_epoch)
     
 if __name__ == "__main__":
