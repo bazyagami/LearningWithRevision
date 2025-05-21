@@ -11,7 +11,7 @@ from longtail_train import train_baseline_longtail, train_with_revision_longtail
 
 def main():
     parser = argparse.ArgumentParser(description="Train ResNet on CIFAR-100")
-    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random"], required=True,
+    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random", "train_with_inv_lin"], required=True,
                         help="Choose training mode: 'baseline' or 'selective_gradient'")
     parser.add_argument("--epoch", type=int, required=False, default=10,
                         help="Number of epochs to train for")
@@ -156,7 +156,12 @@ def main():
         elif args.mode == "train_with_random":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
-            trained_model, num_step = train_revision.train_with_revision_3d(args.start_revision, args.task)
+            trained_model, num_step = train_revision.train_with_random(args.start_revision, args.task)
+            print("Number of steps : ", num_step)
+        elif args.mode == "train_with_inv_lin":
+            train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
+            print(f"Training {args.mode}, will start revision after {args.start_revision}")
+            trained_model, num_step = train_revision.train_with_inverse_linear(args.start_revision, data_size)
             print("Number of steps : ", num_step)
     
     eff_epoch = int(num_step/data_size)

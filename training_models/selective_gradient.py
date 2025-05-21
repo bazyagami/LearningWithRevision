@@ -7,6 +7,7 @@ from utils import log_memory, plot_metrics, plot_metrics_test, plot_accuracy_tim
 from tqdm import tqdm
 import json
 import os
+import numpy as np
 
 class TrainRevision:
     def __init__(self, model_name, model, train_loader, test_loader, device, epochs, save_path, threshold):
@@ -897,6 +898,152 @@ class TrainRevision:
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
                     batch_size = inputs.size(0)
                     selected_count = int(decay_factor * batch_size)
+
+                    if selected_count == 0:
+                        continue
+
+                    selected_indices = torch.randperm(batch_size)[:selected_count]
+                    inputs_selected = inputs[selected_indices]
+                    labels_selected = labels[selected_indices]
+
+                    optimizer.zero_grad()
+                    outputs = self.model(inputs_selected)
+                    loss = criterion(outputs, labels_selected)
+                    num_step += selected_count
+                    samples_used += selected_count
+                    loss.backward()
+                    optimizer.step()
+
+                    running_loss += loss.item()
+                    with torch.no_grad():
+                        preds = torch.argmax(self.model(inputs), dim=1)
+                        total_correct += (preds == labels).sum().item()
+                        total_samples += labels.size(0)
+
+                    progress_bar.set_postfix({"Loss": loss.item()})
+            else:
+                for batch_idx, (inputs, labels) in progress_bar:
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                    optimizer.zero_grad()
+                    outputs = self.model(inputs)
+                    loss = criterion(outputs, labels)
+                    num_step += inputs.size(0)
+                    samples_used += inputs.size(0)
+                    loss.backward()
+                    optimizer.step()
+
+                    running_loss += loss.item()
+                    with torch.no_grad():
+                        preds = torch.argmax(outputs, dim=1)
+                        correct += (preds == labels).sum().item()
+                        total += labels.size(0)
+
+            epoch_loss = running_loss / len(self.train_loader)
+            epoch_accuracy = (
+                total_correct / total_samples if epoch < start_revision else correct / total
+            )
+            epoch_losses.append(epoch_loss)
+            epoch_accuracies.append(epoch_accuracy)
+
+            epoch_end_time = time.time()
+            time_per_epoch.append(epoch_end_time - epoch_start_time)
+
+            print(f"Epoch [{epoch+1}/{self.epochs}], Loss: {epoch_loss:.4f}, Accuracy: {epoch_accuracy:.4f}")
+
+            self.model.eval()
+            test_correct = 0
+            test_total = 0
+            test_loss = 0.0
+            with torch.no_grad():
+                for batch in tqdm(self.test_loader, desc="Evaluating"):
+                    inputs = batch[0].to(self.device)
+                    labels = batch[1].to(self.device)
+                    outputs = self.model(inputs)
+                    batch_loss = criterion(outputs, labels)
+                    test_loss += batch_loss.item()
+                    predictions = torch.argmax(outputs, dim=-1)
+                    test_correct += (predictions == labels).sum().item()
+                    test_total += labels.size(0)
+
+            accuracy = test_correct / test_total
+            val_loss = test_loss / len(self.test_loader)
+            print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+            scheduler.step(val_loss)
+            epoch_test_accuracies.append(accuracy)
+            epoch_test_losses.append(val_loss)
+            samples_used_per_epoch.append(samples_used)
+
+        end_time = time.time()
+        log_memory(start_time, end_time)
+        print(num_step)
+
+        plot_accuracy_time_multi(
+            model_name=self.model_name,
+            accuracy=epoch_accuracies,
+            time_per_epoch=time_per_epoch,
+            save_path=save_path,
+            data_file=save_path,
+        )
+        plot_accuracy_time_multi_test(
+            model_name=self.model_name,
+            accuracy=epoch_test_accuracies,
+            time_per_epoch=time_per_epoch,
+            samples_per_epoch=samples_used_per_epoch,
+            threshold=self.threshold,
+            save_path=save_path,
+            data_file=save_path,
+        )
+
+        return self.model, num_step
+
+    def inverse_linear(self, epoch, alpha):
+        if epoch == 200:
+            return 50000
+        x = np.arange(1, 200)
+        y = 1 / (x + alpha)
+        y_scaled = (y / np.max(y)) * 50000
+        return y_scaled[epoch - 1]
+
+    def train_with_inverse_linear(self, start_revision, data_size):
+        save_path = self.save_path
+        self.model.to(self.device)
+
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
+
+        epoch_losses = []
+        epoch_accuracies = []
+        epoch_test_accuracies = []
+        epoch_test_losses = []
+        time_per_epoch = []
+        samples_used_per_epoch = []
+        num_step = 0
+        alpha=2
+        start_time = time.time()
+
+        for epoch in range(self.epochs):
+            samples_used = 0
+            self.model.train()
+            epoch_start_time = time.time()
+            running_loss = 0.0
+            correct = 0
+            total = 0
+            total_correct = 0
+            total_samples = 0
+
+            print(f"Epoch [{epoch+1}/{self.epochs}]")
+            progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), desc="Training")
+
+            if epoch < start_revision:
+                # Use inverse linear decay
+                scaled_value = self.inverse_linear(epoch + 1, alpha)  # epoch+1 to match 1-based indexing
+                sample_ratio = scaled_value / data_size
+
+                for batch_idx, (inputs, labels) in progress_bar:
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                    batch_size = inputs.size(0)
+                    selected_count = int(sample_ratio * batch_size)
 
                     if selected_count == 0:
                         continue
