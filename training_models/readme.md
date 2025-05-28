@@ -21,12 +21,12 @@ python .\main.py --model mobilenet_v2 --mode train_with_revision --epoch 30 --sa
 
 Running the Scheduled Match Random Dropout (SMRD) : 
 ```
-python .\main.py --model mobilenet_v2 --mode train_with_samples --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
+python .\main.py --model mobilenet_v2 --mode train_with_random --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
 ```
 
 Running the Scalar Random Dropout (SRD): 
 ```
-python .\main.py --model mobilenet_v2 --mode train_with_random --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
+python .\main.py --model mobilenet_v2 --mode train_with_percentage --epoch 30 --save_path cifar10_results/mobilenet_v2 --dataset cifar10 --batch_size 32 --start_revision 29 --task classification --threshold 0.3
 ```
 
 If you wish to change the percentage parameter, head to the train_with_random function and change the decay parameter.

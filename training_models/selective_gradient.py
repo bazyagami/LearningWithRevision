@@ -465,7 +465,7 @@ class TrainRevision:
         return self.model, num_step
     
 
-    def train_with_samples(self, start_revision, task):
+    def train_with_random(self, start_revision, task):
 
         save_path = self.save_path
         self.model.to(self.device)
@@ -862,7 +862,7 @@ class TrainRevision:
         return self.model, num_step
     
 
-    def train_with_random(self, start_revision):
+    def train_with_percentage(self, start_revision):
         save_path = self.save_path
         self.model.to(self.device)
 
