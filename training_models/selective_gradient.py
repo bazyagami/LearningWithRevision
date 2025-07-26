@@ -449,6 +449,7 @@ class TrainRevision:
         print(f"\n✅ Total Wall Time for {self.epochs} epochs: {total_wall_time:.2f} seconds "
             f"({total_wall_time / 60:.2f} minutes)")
 
+
         plot_accuracy_time_multi(
         model_name=self.model_name,  
         accuracy=epoch_accuracies,
