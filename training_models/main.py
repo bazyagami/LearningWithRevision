@@ -2,7 +2,7 @@ import argparse
 import torch
 from model import resnet18, efficientnet_b0
 from model_zoo import ModelZoo
-from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D
+from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D, load_cub2011, load_aircraft, load_flowers
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--start_revision", type=int, help="Start revision after the given epoch")
     parser.add_argument("--long_tail", action="store_true", help="LongTail CIFAR100 or native version")
     parser.add_argument("--ldam", action="store_true", help="Use LDAM-DRW method for long tail classification")
+    parser.add_argument("--download", action="store_true", help="Download dataset if not exists (for aircraft and cub2011 datasets)")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -55,6 +56,25 @@ def main():
     elif args.dataset == "organ_medmnist3d":
         num_classes = 11
         train_loader, test_loader, data_size = load_medmnist3D(args.batch_size)
+    elif args.dataset == "aircraft":
+        num_classes = 100  # FGVC-Aircraft variant 有 100 个类别
+        if args.batch_size:
+            train_loader, test_loader, data_size = load_aircraft(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, test_loader, data_size = load_aircraft(download=args.download)
+    elif args.dataset == "cub2011":
+        num_classes = 200  # CUB-200-2011 有 200 个类别
+        if args.batch_size:
+            train_loader, test_loader, data_size = load_cub2011(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, test_loader, data_size = load_cub2011(root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+    elif args.dataset == "flowers":
+        num_classes = 102  # Oxford 102 Category Flower 有 102 个类别
+        if args.batch_size:
+            train_loader, val_loader, test_loader, data_size = load_flowers(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, val_loader, test_loader, data_size = load_flowers(root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+
 
     if args.pretrained:
         pretrained = True
@@ -169,9 +189,12 @@ def main():
             trained_model, num_step = train_revision.train_with_log(args.start_revision, data_size)
             print("Number of steps : ", num_step)
     
-    eff_epoch = int(num_step/data_size)
-
-    print("Effective Epochs: ", eff_epoch)
+    # 只有在某些训练模式下才计算有效epoch
+    if 'num_step' in locals():
+        eff_epoch = int(num_step/data_size)
+        print("Effective Epochs: ", eff_epoch)
+    else:
+        print("Training completed in baseline mode")
     torch.save(trained_model, "trained_model.pth")
     
 if __name__ == "__main__":
