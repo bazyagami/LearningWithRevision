@@ -2,21 +2,20 @@ import argparse
 import torch
 from model import resnet18, efficientnet_b0
 from model_zoo import ModelZoo
-from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D
+from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D, load_noisy
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
 from longtail_train import train_baseline_longtail, train_with_revision_longtail
 
-
 def main():
     parser = argparse.ArgumentParser(description="Train ResNet on CIFAR-100")
-    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random", "train_with_inv_lin", "train_with_log", "train_with_percentage"], required=True,
+    parser.add_argument("--mode", type=str, choices=["baseline", "selective_gradient", "selective_epoch", "train_with_revision", "train_with_samples", "train_with_revision_3d", "train_with_random", "train_with_inv_lin", "train_with_log", "train_with_percentage", "train_with_adaptive"], required=True,
                         help="Choose training mode: 'baseline' or 'selective_gradient'")
     parser.add_argument("--epoch", type=int, required=False, default=10,
                         help="Number of epochs to train for")
     parser.add_argument("--task", type=str, required=True, default="classification",
-                        help="segmentation or classification")
+                        help="segmentation or classification or longtail")
     parser.add_argument("--model", type=str, choices=["resnet18", "resnet_3d", "resnet34", "resnet50", "resnet101", "efficientnet_b0","efficientnet_b7", "efficientnet_b4", "mobilenet_v2", "mobilenet_v3", "vit_b_16", "mae_vit_b_16", "efficientformer", "segformer_b2"], required=True,
                         help="Choose the model: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'mobilenet_v2', 'mobilenet_v3', 'efficientnet_b0', 'vit_b_16', 'mae_vit_b_16'")
     parser.add_argument("--pretrained", action="store_true", help="Use pretrained versions (applies to torchvision models, not MAE)")
@@ -29,6 +28,9 @@ def main():
     parser.add_argument("--start_revision", type=int, help="Start revision after the given epoch")
     parser.add_argument("--long_tail", action="store_true", help="LongTail CIFAR100 or native version")
     parser.add_argument("--ldam", action="store_true", help="Use LDAM-DRW method for long tail classification")
+    parser.add_argument("--noisy", action="store_true", help="Use noisy dataset")
+    parser.add_argument("--interval", type=int, default=50)
+    parser.add_argument("--increment", type=float, default=0.1)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,7 +46,10 @@ def main():
 
         num_classes = 100
     elif args.dataset == "cifar10":
-        train_loader, test_loader, cls_num_list, data_size = load_cifar10(args.long_tail, args.batch_size)
+        if args.noisy:
+            train_loader, test_loader, data_size = load_noisy(args.batch_size)
+        else:
+            train_loader, test_loader, cls_num_list, data_size = load_cifar10(args.long_tail, args.batch_size)
         num_classes = 10
     elif args.dataset == "imagenet":
         num_classes = 1000
@@ -55,11 +60,14 @@ def main():
     elif args.dataset == "organ_medmnist3d":
         num_classes = 11
         train_loader, test_loader, data_size = load_medmnist3D(args.batch_size)
+    
+    if not args.long_tail:
+        cls_num_list = None
 
     if args.pretrained:
         pretrained = True
     
-    if args.task == "classification":
+    if args.task == "classification" or args.task=="longtail":
         mz = ModelZoo(num_classes, pretrained)
     elif args.task == "segmentation":
         mz = ModelZoo(num_classes, pretrained)
@@ -129,7 +137,7 @@ def main():
     else: 
         if args.mode == "baseline":
             print("Training in baseline mode...")
-            trained_model = train_baseline(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path)
+            trained_model = train_baseline(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.task, cls_num_list)
         elif args.mode == "selective_gradient":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print("Training with selective gradient updates...")
@@ -141,7 +149,10 @@ def main():
         elif args.mode == "train_with_revision":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
-            trained_model, num_step = train_revision.train_with_revision(args.start_revision, args.task)
+            if args.noisy:
+                trained_model, num_step = train_revision.train_with_noisy(args.start_revision, args.task, cls_num_list)
+            else:
+                trained_model, num_step = train_revision.train_with_revision(args.start_revision, args.task, cls_num_list)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_random":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
@@ -156,7 +167,7 @@ def main():
         elif args.mode == "train_with_percentage":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
-            trained_model, num_step = train_revision.train_with_percentage(args.start_revision, args.task)
+            trained_model, num_step = train_revision.train_with_percentage(args.start_revision)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_inv_lin":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
@@ -168,7 +179,14 @@ def main():
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             trained_model, num_step = train_revision.train_with_log(args.start_revision, data_size)
             print("Number of steps : ", num_step)
+        elif args.mode == "train_with_adaptive":
+            train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
+            print(f"Training {args.mode}, will start revision after {args.start_revision}")
+            trained_model, num_step = train_revision.train_with_adaptive(args.start_revision, args.task, cls_num_list, args.interval, args.increment)
+            print("Number of steps : ", num_step)
     
+    if args.mode == "baseline":
+        num_step = data_size
     eff_epoch = int(num_step/data_size)
 
     print("Effective Epochs: ", eff_epoch)

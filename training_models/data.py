@@ -6,6 +6,7 @@ import torchvision.models as models
 from imbalance_cifar import IMBALANCECIFAR100, IMBALANCECIFAR10
 from medmnist import NoduleMNIST3D, INFO, Evaluator
 import medmnist
+from noisy_data.datasets import input_dataset
 
 def load_cifar100(long_tail, batch_size=128):
     cls_num_list = None
@@ -131,3 +132,14 @@ def load_medmnist3D(batch_size=128):
 
     return train_loader, test_loader, len(train_dataset)
 
+def load_noisy(batch_size):
+    noise_type='random_label1'
+    noise_path = r'D:\LearningWithRevision\training_models\noisy_data\CIFAR-10_human.pt'
+    is_human = False
+    print("Loading noisy dataset")
+    trainset,testset,num_classes,num_training_samples = input_dataset('cifar10',noise_type, noise_path, is_human)
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
+    print(num_classes)
+    print(num_training_samples)
+    return train_loader, test_loader, num_training_samples

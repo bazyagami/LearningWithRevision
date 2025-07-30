@@ -5,14 +5,41 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 import time
 from utils import log_memory, plot_metrics, plot_metrics_test, plot_accuracy_time_multi, plot_accuracy_time_multi_test
 from tqdm import tqdm
+import torch.nn.functional as F
+import numpy as np
 
+def focal_loss(input_values, gamma):
+    """Computes the focal loss"""
+    p = torch.exp(-input_values)
+    loss = (1 - p) ** gamma * input_values
+    return loss.mean()
 
-def train_baseline(model_name, model, train_loader, test_loader, device, epochs, save_path):
+class FocalLoss(nn.Module):
+    def __init__(self, weight=None, gamma=0.):
+        super(FocalLoss, self).__init__()
+        assert gamma >= 0
+        self.gamma = gamma
+        self.weight = weight
+
+    def forward(self, input, target):
+        return focal_loss(F.cross_entropy(input, target, reduction='none', weight=self.weight), self.gamma)
+
+def train_baseline(model_name, model, train_loader, test_loader, device, epochs, save_path, task, cls_num_list):
     model.to(device)
     
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
     # optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
-    
+    if task=='classification':
+            criterion = nn.CrossEntropyLoss()
+    elif 'longtail':
+        train_sampler = None
+        idx = epochs // 160
+        betas = [0, 0.9999]
+        effective_num = 1.0 - np.power(betas[idx], cls_num_list)
+        per_cls_weights = (1.0 - betas[idx]) / np.array(effective_num)
+        per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+        per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(device)
+        criterion = FocalLoss(weight=per_cls_weights, gamma=1).cuda(device)
     # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
     optimizer = optim.AdamW(model.parameters(), lr=3e-4)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.98)

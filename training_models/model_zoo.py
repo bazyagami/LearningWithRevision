@@ -5,6 +5,8 @@ from torchvision.models import ViT_B_16_Weights
 import timm
 import torchvision.models.segmentation as seg_models
 
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
+
 class ModelZoo:
     def __init__(self, num_classes, pretrained):
         self.num_classes = num_classes
@@ -192,4 +194,19 @@ class ModelZoo:
         model.reset_classifier(self.num_classes)
         return model
 
-    
+    def gpt2(self, model_name="gpt2"):
+        """
+        Load a GPT-2 model with a language modeling head.
+        `model_name`: one of "gpt2", "gpt2-medium", etc.
+        """
+        if self.pretrained:
+            model = GPT2LMHeadModel.from_pretrained(model_name)
+        else:
+            config = GPT2Config.from_pretrained(model_name)
+            model = GPT2LMHeadModel(config)
+
+        # GPT-2's vocab size is typically 50257; adapt output layer if needed.
+        if self.num_classes and self.num_classes != model.config.vocab_size:
+            model.resize_token_embeddings(self.num_classes)
+
+        return model
