@@ -3,6 +3,7 @@ import torch
 from model import resnet18, efficientnet_b0
 from model_zoo import ModelZoo
 from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D, load_noisy
+from data import load_cifar100, load_mnist, load_imagenet, load_cityscapes, load_cifar10, load_medmnist3D, load_cub2011, load_aircraft, load_flowers
 from baseline import train_baseline
 from selective_gradient import TrainRevision
 from test import test_model
@@ -31,6 +32,7 @@ def main():
     parser.add_argument("--noisy", action="store_true", help="Use noisy dataset")
     parser.add_argument("--interval", type=int, default=50)
     parser.add_argument("--increment", type=float, default=0.1)
+    parser.add_argument("--download", action="store_true", help="Download dataset if not exists (for aircraft and cub2011 datasets)")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -63,6 +65,25 @@ def main():
     
     if not args.long_tail:
         cls_num_list = None
+    elif args.dataset == "aircraft":
+        num_classes = 100  # FGVC-Aircraft variant 有 100 个类别
+        if args.batch_size:
+            train_loader, test_loader, data_size = load_aircraft(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, test_loader, data_size = load_aircraft(download=args.download)
+    elif args.dataset == "cub2011":
+        num_classes = 200  # CUB-200-2011 有 200 个类别
+        if args.batch_size:
+            train_loader, test_loader, data_size = load_cub2011(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, test_loader, data_size = load_cub2011(root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+    elif args.dataset == "flowers":
+        num_classes = 102  # Oxford 102 Category Flower 有 102 个类别
+        if args.batch_size:
+            train_loader, val_loader, test_loader, data_size = load_flowers(args.batch_size, root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+        else:
+            train_loader, val_loader, test_loader, data_size = load_flowers(root='/root/autodl-tmp/project/training_models/dataset', download=args.download)
+
 
     if args.pretrained:
         pretrained = True
@@ -190,6 +211,12 @@ def main():
     eff_epoch = int(num_step/data_size)
 
     print("Effective Epochs: ", eff_epoch)
+    # 只有在某些训练模式下才计算有效epoch
+    if 'num_step' in locals():
+        eff_epoch = int(num_step/data_size)
+        print("Effective Epochs: ", eff_epoch)
+    else:
+        print("Training completed in baseline mode")
     torch.save(trained_model, "trained_model.pth")
     
 if __name__ == "__main__":
