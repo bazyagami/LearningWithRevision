@@ -1731,3 +1731,221 @@ class TrainRevision:
         )
 
         return self.model, num_step
+    
+    def train_with_alternative(self, start_revision, task, cls_num_list):
+
+        save_path = self.save_path
+        self.model.to(self.device)
+        if task=='classification':
+            criterion = nn.CrossEntropyLoss()
+        elif 'longtail':
+            train_sampler = None
+            idx = self.epochs // 160
+            betas = [0, 0.9999]
+            effective_num = 1.0 - np.power(betas[idx], cls_num_list)
+            per_cls_weights = (1.0 - betas[idx]) / np.array(effective_num)
+            per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+            per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(self.device)
+            criterion = FocalLoss(weight=per_cls_weights, gamma=1).cuda(self.device)
+        # optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0001)
+        #as per implementation LR=0.045, they use 16 GPU. https://discuss.pytorch.org/t/training-mobilenet-on-imagenet/174391/6 from this blog
+        #we use the idea to divide the learning rate by the number of GPUs. 
+        # optimizer = optim.RMSprop(self.model.parameters(), weight_decay=0.00004, momentum=0.9, lr=0.0028125)   
+        optimizer = optim.AdamW(self.model.parameters(), lr=3e-4)
+        scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
+        epoch_losses = []
+        epoch_accuracies = []
+        epoch_test_accuracies = []
+        epoch_test_losses = []
+        time_per_epoch = []
+        start_time = time.time()
+        num_step = 0
+        samples_used_per_epoch = []
+        for epoch in range(self.epochs):
+            samples_used = 0
+            if epoch < start_revision : 
+                self.model.train()
+                epoch_start_time = time.time()
+                running_loss = 0.0
+                correct = 0
+                total_correct = 0
+                total_samples = 0
+                total = 0
+                print(f"Epoch [{epoch+1/self.epochs}]")
+                if epoch % 2 == 0:
+                    misclassified_indices = []
+
+                    for batch_idx, (inputs, labels) in tqdm(enumerate(self.train_loader), total=len(self.train_loader)):
+                        inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                        with torch.no_grad():
+                            outputs = self.model(inputs)
+                            preds = torch.argmax(outputs, dim=1)
+
+                            if self.threshold == 0:
+                                mask = preds != labels
+                            else:
+                                prob = torch.softmax(outputs, dim=1)
+                                correct_class = prob[torch.arange(labels.size(0)), labels]
+                                mask = correct_class < self.threshold
+
+                        if mask.any():
+                            base_idx = batch_idx * self.train_loader.batch_size
+                            selected = mask.nonzero(as_tuple=True)[0] + base_idx
+                            misclassified_indices.extend(selected.tolist())
+
+                    cached_misclassified_indices = misclassified_indices
+
+                # Use cached indices for training
+                if not cached_misclassified_indices:
+                    print("No misclassified samples. Skipping...")
+                    continue
+
+                subset = torch.utils.data.Subset(self.train_loader.dataset, cached_misclassified_indices)
+                misclassified_loader = torch.utils.data.DataLoader(
+                    subset, batch_size=self.train_loader.batch_size, shuffle=True, num_workers=2
+                )
+
+                for batch_idx, (inputs, labels) in tqdm(enumerate(misclassified_loader), total=len(misclassified_loader)):
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                    optimizer.zero_grad()
+                    outputs = self.model(inputs)
+                    loss = criterion(outputs, labels)
+                    num_step += len(outputs)
+                    samples_used += len(outputs)
+                    loss.backward()
+                    optimizer.step()
+
+                    running_loss += loss.item()
+                    total_correct += (torch.argmax(outputs, dim=1) == labels).sum().item()
+                    total_samples += labels.size(0)
+
+                epoch_loss = running_loss / len(misclassified_loader)
+                epoch_accuracy = total_correct / total_samples if total_samples > 0 else 0
+                epoch_losses.append(epoch_loss)
+                epoch_accuracies.append(epoch_accuracy)
+
+                epoch_end_time = time.time()
+                time_per_epoch.append(epoch_end_time - epoch_start_time)
+
+                print(f"Epoch [{epoch + 1}/{self.epochs}], Loss: {epoch_loss:.4f}, Accuracy: {epoch_accuracy:.4f}")
+
+
+                self.model.eval()
+                correct = 0
+                total = 0
+                test_loss = 0.0
+                with torch.no_grad():
+                    for batch in tqdm(self.test_loader, desc="Evaluating"):
+                        inputs = batch[0].to(self.device)
+                        labels = batch[1].to(self.device)
+                        outputs = self.model(inputs)
+
+                        batch_loss = criterion(outputs, labels)
+                        test_loss+=batch_loss.item()
+
+                        predictions = torch.argmax(outputs, dim=-1)
+                        correct += (predictions == labels).sum().item()
+                        total += labels.size(0)
+
+                accuracy = correct / total
+                val_loss = test_loss / len(self.test_loader)
+                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+                scheduler.step(val_loss)
+                epoch_test_accuracies.append(accuracy)
+                epoch_test_losses.append(val_loss)
+
+            else:
+                self.model.train()
+                running_loss = 0.0
+                correct = 0
+                total = 0
+
+                print(f"Epoch [{epoch+1/self.epochs}]")
+                progress_bar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), desc="Training")
+
+
+                for batch_idx, (inputs, labels) in progress_bar:
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                    optimizer.zero_grad()
+
+                    outputs = self.model(inputs)
+                    loss = criterion(outputs, labels)
+                    num_step+=len(outputs)
+                    samples_used+=len(outputs)
+                    loss.backward()
+                    optimizer.step()
+
+                    running_loss += loss.item()
+                    
+                    outputs = self.model(inputs)
+                    preds = torch.argmax(outputs, dim=1)
+                    correct += (preds == labels).sum().item()
+                    total += labels.size(0)
+
+                epoch_loss = running_loss / len(self.train_loader)
+                epoch_accuracy = correct / total
+                epoch_losses.append(epoch_loss)
+                epoch_accuracies.append(epoch_accuracy)
+
+                epoch_end_time = time.time()
+                time_per_epoch.append(epoch_end_time - epoch_start_time)
+
+                print(f"Epoch [{epoch+1}/{self.epochs}], Loss: {epoch_loss:.4f}, Accuracy: {epoch_accuracy:.4f}")
+
+                self.model.eval()
+                test_correct = 0
+                test_total = 0
+                test_loss = 0.0
+                with torch.no_grad():
+                    for batch in tqdm(self.test_loader, desc="Evaluating"):
+                        inputs = batch[0].to(self.device)
+                        labels = batch[1].to(self.device)
+                        outputs = self.model(inputs)
+
+                        batch_loss = criterion(outputs, labels)
+                        test_loss+=batch_loss.item()
+
+                        predictions = torch.argmax(outputs, dim=-1)
+                        test_correct += (predictions == labels).sum().item()
+                        test_total += labels.size(0)
+
+                accuracy = test_correct / test_total
+                val_loss = test_loss / len(self.test_loader)
+                print(f"Epoch {epoch + 1}/{self.epochs}, Test Accuracy: {accuracy:.4f}, Test Loss: {val_loss:.4f}")
+                scheduler.step(val_loss)
+                epoch_test_accuracies.append(accuracy)
+                epoch_test_losses.append(val_loss)
+            
+            samples_used_per_epoch.append(samples_used)
+
+
+        end_time = time.time()
+        log_memory(start_time, end_time)
+        print(num_step)
+
+        total_wall_time = end_time - start_time
+        print(f"\n Total Wall Time for {self.epochs} epochs: {total_wall_time:.2f} seconds "
+            f"({total_wall_time / 60:.2f} minutes)")
+
+
+        plot_accuracy_time_multi(
+        model_name=self.model_name,  
+        accuracy=epoch_accuracies,
+        time_per_epoch=time_per_epoch,  
+        save_path=save_path,
+        data_file=save_path
+        )
+        plot_accuracy_time_multi_test(
+            model_name = self.model_name,
+            accuracy=epoch_test_accuracies,
+            time_per_epoch=time_per_epoch,
+            samples_per_epoch=samples_used_per_epoch,
+            threshold=self.threshold,
+            save_path=save_path,
+            data_file=save_path
+        )
+
+        return self.model, num_step
