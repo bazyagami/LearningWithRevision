@@ -175,14 +175,17 @@ def main():
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
             if args.noisy:
-                trained_model, num_step = train_revision.train_with_noisy(args.start_revision, args.task, cls_num_list)
+                trained_model, num_step = train_revision.train_with_noisy_revision(args.start_revision, args.task, cls_num_list)
             else:
                 trained_model, num_step = train_revision.train_with_revision(args.start_revision, args.task, cls_num_list)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_random":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
-            trained_model, num_step = train_revision.train_with_random(args.start_revision, args.task)
+            if args.noisy:
+                trained_model, num_step = train_revision.train_with_noisy_random(args.start_revision, args.task)
+            else:
+                trained_model, num_step = train_revision.train_with_random(args.start_revision, args.task)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_revision_3d":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
@@ -192,7 +195,10 @@ def main():
         elif args.mode == "train_with_percentage":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
             print(f"Training {args.mode}, will start revision after {args.start_revision}")
-            trained_model, num_step = train_revision.train_with_percentage(args.start_revision)
+            if args.noisy:
+                trained_model, num_step = train_revision.train_with_noisy_percentage(args.start_revision)
+            else:
+                trained_model, num_step = train_revision.train_with_percentage(args.start_revision)
             print("Number of steps : ", num_step)
         elif args.mode == "train_with_inv_lin":
             train_revision = TrainRevision(args.model, model, train_loader, test_loader, device, args.epoch, args.save_path, args.threshold)
