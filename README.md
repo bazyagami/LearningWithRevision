@@ -4,14 +4,14 @@
 Install python3+.
 Install [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-Run the following:
-```conda env create -n pdd -f environment.yml || conda env update -n pdd -f environment.yml
-conda activate pdd```
+Then run `make env`.
 
 ### Datasets Supported
 The 'data.py' file has the dataloaders for CIFAR100, CIFAR10, MNIST and IMAGENET. 
 
-### Additional datasets 
+### Additional datasets
+Note: `make clean` can remove all the extraneous pieces from running training.
+
 For longtail classification, the dataset is created by the imbalance_cifar.py file. 
 
 Running the baseline (example: model, save_path, dataset and batch size can be changed accordingly): 
