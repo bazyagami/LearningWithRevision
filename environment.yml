@@ -12,7 +12,4 @@ dependencies:
       - pyyaml
       - tqdm
       - scikit-learn
-      - pytest
-      - ruff
-      - black
       - pre-commit

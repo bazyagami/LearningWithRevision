@@ -4,7 +4,7 @@
 Install python3+.
 Install [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-Then run `make env`.
+Then run `make env && conda activate pdd`.
 
 ### Datasets Supported
 The 'data.py' file has the dataloaders for CIFAR100, CIFAR10, MNIST and IMAGENET. 
