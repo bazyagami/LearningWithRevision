@@ -13,3 +13,5 @@ dependencies:
       - tqdm
       - scikit-learn
       - pre-commit
+      - ruff
+      - black
