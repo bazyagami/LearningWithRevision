@@ -1,0 +1,17 @@
+name: pdd
+channels: [conda-forge, pytorch, defaults]
+dependencies:
+  - python=3.10
+  - pytorch
+  - torchvision
+  # - pytorch-cuda=12.1  # Uncomment on Linux with NVIDIA
+  - pip
+  - pip:
+      - timm
+      - medmnist
+      - pyyaml
+      - tqdm
+      - scikit-learn
+      - pre-commit
+      - ruff
+      - black
