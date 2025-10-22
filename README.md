@@ -1,4 +1,4 @@
-# Curriculum Learning with Revision
+# Progressive Data Dropout: An Embarrassingly Simple Approach to Faster Train
 
 ### Dependencies
 - Install python3 and pytorch
