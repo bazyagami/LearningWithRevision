@@ -30,3 +30,5 @@ python .\main.py --model mobilenet_v2 --mode train_with_percentage --epoch 30 --
 ```
 
 If you wish to change the percentage parameter, head to the train_with_random function and change the decay parameter.
+
+Note: The current codebase provides a recipe for single GPU training, multi-GPU training codes will be released soon.
