@@ -1,5 +1,7 @@
 # Progressive Data Dropout: An Embarrassingly Simple Approach to Faster Train
 
+Link to paper : https://arxiv.org/pdf/2505.22342
+
 ### Dependencies
 - Install python3 and pytorch
 
